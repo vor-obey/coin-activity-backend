@@ -12,7 +12,7 @@ const PORT = 3001;
 app.use(cors());
 
 // Timeframes
-const clients = new Map<WebSocket, { timeframe: "1m" | "3m" | "5m" | "15m" }>();
+const clients = new Map<WebSocket, { timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" }>();
 
 // Last timeframe data
 const coinStateByTimeframe: Record<string, any> = {
@@ -20,6 +20,8 @@ const coinStateByTimeframe: Record<string, any> = {
   "3m": {},
   "5m": {},
   "15m": {},
+  "30m": {},
+  "1h": {},
 };
 
 async function getUSDTTradingPairs(): Promise<string[]> {
@@ -47,7 +49,7 @@ async function getUSDTTradingPairs(): Promise<string[]> {
   return filteredTickers;
 }
 
-async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m") {
+async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1h") {
   const symbols = await getUSDTTradingPairs();
 
   console.log(
@@ -111,11 +113,15 @@ let ws1m: WebSocket | null = null;
 let ws3m: WebSocket | null = null;
 let ws5m: WebSocket | null = null;
 let ws15m: WebSocket | null = null;
+let ws30m: WebSocket | null = null;
+let ws1h: WebSocket | null = null;
 
 startBinanceWS("1m").then((ws) => (ws1m = ws));
 startBinanceWS("3m").then((ws) => (ws3m = ws));
 startBinanceWS("5m").then((ws) => (ws5m = ws));
 startBinanceWS("15m").then((ws) => (ws15m = ws));
+startBinanceWS("30m").then((ws) => (ws30m = ws));
+startBinanceWS("1h").then((ws) => (ws1h = ws));
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -133,7 +139,7 @@ wss.on("connection", (ws) => {
       const data = JSON.parse(message.toString());
       if (
         data.action === "setTimeframe" &&
-        ["1m", "3m", "5m", "15m"].includes(data.timeframe)
+        ["1m", "3m", "5m", "15m", "30m", "1h"].includes(data.timeframe)
       ) {
         console.log(`Client requested timeframe change to ${data.timeframe}`);
         clients.set(ws, { timeframe: data.timeframe });
