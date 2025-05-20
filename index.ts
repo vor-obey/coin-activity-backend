@@ -52,6 +52,7 @@ async function getUSDTTradingPairs(): Promise<string[]> {
 let volume24hMap: Record<string, number> = {};
 
 async function updateVolumes(symbols: string[]) {
+  console.log('Run')
   try {
     const results: any = await Promise.all(
         symbols.map((s) =>
@@ -76,17 +77,12 @@ async function updateVolumes(symbols: string[]) {
 }
 
 
-async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1h") {
-  const symbols = await getUSDTTradingPairs();
-
-  await updateVolumes(symbols);
-  setInterval(() => updateVolumes(symbols), 60_000);
-
+async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1h", symbols: string[]) {
   console.log(
-    `✅ Tracking ${symbols.length} USDT pairs with timeframe ${timeframe}`,
+    `✅ Tracking ${symbols?.length} USDT pairs with timeframe ${timeframe}`,
   );
 
-  const streams = symbols.map((s) => `${s}@kline_${timeframe}`).join("/");
+  const streams = symbols?.map((s: string) => `${s}@kline_${timeframe}`).join("/");
   const ws = new WebSocket(
     `wss://stream.binance.com:9443/stream?streams=${streams}`,
   );
@@ -147,12 +143,21 @@ let ws15m: WebSocket | null = null;
 let ws30m: WebSocket | null = null;
 let ws1h: WebSocket | null = null;
 
-startBinanceWS("1m").then((ws) => (ws1m = ws));
-startBinanceWS("3m").then((ws) => (ws3m = ws));
-startBinanceWS("5m").then((ws) => (ws5m = ws));
-startBinanceWS("15m").then((ws) => (ws15m = ws));
-startBinanceWS("30m").then((ws) => (ws30m = ws));
-startBinanceWS("1h").then((ws) => (ws1h = ws));
+async function main() {
+  const symbols = await getUSDTTradingPairs();
+
+  await updateVolumes(symbols);
+  setInterval(() => updateVolumes(symbols), 60_000);
+
+  startBinanceWS("1m", symbols).then((ws) => (ws1m = ws));
+  startBinanceWS("3m", symbols).then((ws) => (ws3m = ws));
+  startBinanceWS("5m", symbols).then((ws) => (ws5m = ws));
+  startBinanceWS("15m", symbols).then((ws) => (ws15m = ws));
+  startBinanceWS("30m", symbols).then((ws) => (ws30m = ws));
+  startBinanceWS("1h", symbols).then((ws) => (ws1h = ws));
+}
+
+main().catch(console.error);
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
