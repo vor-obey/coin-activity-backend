@@ -147,7 +147,7 @@ async function main() {
   const symbols = await getUSDTTradingPairs();
 
   await updateVolumes(symbols);
-  setInterval(() => updateVolumes(symbols), 60_000);
+  setInterval(() => updateVolumes(symbols), 240_000);
 
   startBinanceWS("1m", symbols).then((ws) => (ws1m = ws));
   startBinanceWS("3m", symbols).then((ws) => (ws3m = ws));
