@@ -49,8 +49,38 @@ async function getUSDTTradingPairs(): Promise<string[]> {
   return filteredTickers;
 }
 
+let volume24hMap: Record<string, number> = {};
+
+async function updateVolumes(symbols: string[]) {
+  try {
+    const results: any = await Promise.all(
+        symbols.map((s) =>
+            axios
+                .get(
+                    `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${s.toUpperCase()}`,
+                )
+                .then((res) => res.data)
+                .catch(() => null),
+        ),
+    );
+
+    volume24hMap = {};
+    for (const r of results) {
+      if (r && r.symbol && r.quoteVolume) {
+        volume24hMap[r.symbol.toUpperCase()] = parseFloat(r.quoteVolume);
+      }
+    }
+  } catch (e) {
+    console.error("Volume update error:", e);
+  }
+}
+
+
 async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1h") {
   const symbols = await getUSDTTradingPairs();
+
+  await updateVolumes(symbols);
+  setInterval(() => updateVolumes(symbols), 60_000);
 
   console.log(
     `✅ Tracking ${symbols.length} USDT pairs with timeframe ${timeframe}`,
@@ -77,6 +107,7 @@ async function startBinanceWS(timeframe: "1m" | "3m" | "5m" | "15m" | "30m" | "1
         symbol,
         open,
         close,
+        volume24h: volume24hMap[symbol] || 0,
         change: +change.toFixed(2),
         isHot: Math.abs(change) >= 1.5,
         direction: change > 0 ? "up" : "down",
